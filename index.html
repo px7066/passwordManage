@@ -1,0 +1,2520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>服务器密码管理</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    html {
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      height: 56px;
+      min-height: 56px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-right: auto;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 72px;
+      right: 20px;
+      background: #10b981;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 2000;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.error {
+      background: #ef4444;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-danger {
+      background: #fef2f2;
+      color: #ef4444;
+      border: 1px solid #fecaca;
+    }
+
+    .btn-danger:hover {
+      background: #fee2e2;
+    }
+
+    /* Main Content */
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Server List */
+    .server-list {
+      width: 280px;
+      min-width: 200px;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .server-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.1s ease;
+    }
+
+    .server-item:hover {
+      background: #f1f5f9;
+    }
+
+    .server-item.selected {
+      background: #dbeafe;
+      border-left: 4px solid #2563eb;
+      padding-left: 16px;
+    }
+
+    .server-item-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .server-type-icon {
+      width: 36px;
+      height: 36px;
+      background: #e2e8f0;
+      border-radius: 6px;
+      display: table-cell;
+      vertical-align: middle;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #475569;
+      padding-top: 10px;
+    }
+
+    .server-name {
+      font-weight: 500;
+      font-size: 16px;
+      color: #1e293b;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .server-meta {
+      font-size: 14px;
+      color: #64748b;
+      margin-left: 48px;
+    }
+
+    .server-delete {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .server-delete:hover {
+      background: transparent;
+      color: #ef4444;
+    }
+
+    .server-actions {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .server-item:hover .server-actions {
+      opacity: 1;
+    }
+
+    .server-connect {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #10b981;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .server-connect:hover {
+      background: transparent;
+      color: #059669;
+    }
+
+    .server-upload {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: #2563eb;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .server-upload:hover {
+      background: transparent;
+      color: #1d4ed8;
+    }
+
+    .empty-list {
+      padding: 40px 20px;
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    .empty-list-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background: #f8fafc;
+      display: flex;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .detail-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      width: 100%;
+      max-width: 800px;
+      max-width: 800px;
+    }
+
+    .detail-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #cbd5e1;
+      border-radius: 24px;
+      transition: 0.2s;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: #10b981;
+    }
+
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Password Generator */
+    .password-generator {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    .password-generator-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+
+    .password-preview {
+      background: #1e293b;
+      color: #10b981;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 14px;
+      word-break: break-all;
+      margin-bottom: 12px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-preview .copy-btn {
+      margin-left: auto;
+      background: transparent;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .password-preview .copy-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: #e2e8f0;
+    }
+
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #2563eb;
+      cursor: pointer;
+    }
+
+    .slider-value {
+      min-width: 40px;
+      text-align: center;
+      font-weight: 500;
+      color: #2563eb;
+    }
+
+    .generate-btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .generate-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .strength-indicator {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .strength-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: #e2e8f0;
+    }
+
+    .strength-bar.active.weak { background: #ef4444; }
+    .strength-bar.active.medium { background: #f59e0b; }
+    .strength-bar.active.strong { background: #10b981; }
+
+    /* IP Array Input */
+    .ip-array-container {
+      display: none;
+    }
+
+    .ip-array-container.visible {
+      display: block;
+    }
+
+    .ip-single-container {
+      display: block;
+    }
+
+    .ip-single-container.hidden {
+      display: none;
+    }
+
+    .toggle-container.hidden {
+      display: none;
+    }
+
+    .ip-textarea {
+      min-height: 80px;
+      font-family: "Cascadia Code", "Consolas", monospace;
+    }
+
+    .ip-port-container {
+      display: block;
+    }
+
+    .ip-port-container.hidden {
+      display: none;
+    }
+
+    .web-url-container {
+      display: block;
+    }
+
+    .web-url-container.hidden {
+      display: none;
+    }
+
+    /* Action Buttons */
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .btn-save {
+      flex: 1;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-save:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 12px;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .btn-cancel:hover {
+      background: #e2e8f0;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .modal-close:hover {
+      color: #475569;
+    }
+
+    /* Import Preview Table */
+    .import-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 12px;
+    }
+
+    .import-table th, .import-table td {
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .import-table th {
+      background: #f8fafc;
+      font-weight: 500;
+    }
+
+    .import-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .import-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      padding: 6px 0;
+      z-index: 1001;
+      display: none;
+    }
+
+    .context-menu.visible {
+      display: block;
+    }
+
+    .context-menu-item {
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .context-menu-item:hover {
+      background: #f1f5f9;
+    }
+
+    .context-menu-item.danger {
+      color: #ef4444;
+    }
+
+    .context-menu-item.danger:hover {
+      background: #fef2f2;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 6px 0;
+    }
+
+    /* Welcome State */
+    .welcome-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    .welcome-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .welcome-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .welcome-text {
+      font-size: 14px;
+    }
+
+    /* Terminal Styles */
+    .terminal-tabs {
+      display: flex;
+      background: #1e1e1e;
+      border-bottom: 1px solid #333;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .terminal-tabs::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .terminal-tabs::-webkit-scrollbar-thumb {
+      background: #555;
+    }
+
+    .terminal-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #2d2d2d;
+      color: #ccc;
+      font-size: 13px;
+      cursor: pointer;
+      border-right: 1px solid #333;
+      white-space: nowrap;
+      min-width: 120px;
+      max-width: 200px;
+    }
+
+    .terminal-tab:hover {
+      background: #3d3d3d;
+    }
+
+    .terminal-tab.active {
+      background: #1e1e1e;
+      color: #fff;
+      border-bottom: 2px solid #2563eb;
+    }
+
+    .terminal-tab-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .terminal-tab-close {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      color: #888;
+      font-size: 14px;
+    }
+
+    .terminal-tab-close:hover {
+      background: #555;
+      color: #fff;
+    }
+
+    .terminal-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #1e1e1e;
+      min-height: 0;
+    }
+
+    .terminal-content {
+      flex: 1;
+      padding: 8px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .terminal-content.active {
+      display: block;
+    }
+
+    .terminal-wrapper {
+      height: 100%;
+      background: #1e1e1e;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .terminal-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-new-tab {
+      padding: 10px 16px;
+      color: #888;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .terminal-new-tab:hover {
+      color: #fff;
+      background: #2d2d2d;
+    }
+
+    /* Auto Command Modal */
+    .auto-cmd-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .auto-cmd-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>服务器密码管理</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="showAddForm()">
+        <span>+</span> 新增
+      </button>
+      <button class="btn btn-secondary" onclick="showImportModal()">
+        导入
+      </button>
+      <button class="btn btn-secondary" onclick="showExportModal()">
+        导出
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="server-list" id="serverList">
+      <div class="empty-list" id="emptyList">
+        <div class="empty-list-icon">📦</div>
+        <div>暂无服务器记录</div>
+        <div style="margin-top: 8px; font-size: 12px;">点击"新增"添加第一条记录</div>
+      </div>
+    </div>
+
+    <!-- Terminal Section -->
+    <div class="terminal-container" id="terminalContainer" style="display: none;">
+      <div class="terminal-tabs" id="terminalTabs">
+        <div class="terminal-new-tab" onclick="createLocalTerminal()" title="新建本地终端">+</div>
+      </div>
+      <div id="terminalContents"></div>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+      <div class="welcome-state" id="welcomeState">
+        <div class="welcome-icon">🔐</div>
+        <div class="welcome-title">欢迎使用服务器密码管理</div>
+        <div class="welcome-text">选择左侧列表查看详情，或点击"新增"添加新记录</div>
+      </div>
+
+      <div class="detail-card" id="detailCard" style="display: none;">
+        <div class="detail-title" id="formTitle">新增服务器</div>
+        <form id="serverForm" onsubmit="saveServer(event)">
+          <input type="hidden" id="serverId">
+
+          <div class="form-group">
+            <label class="form-label">类型 *</label>
+            <select class="form-select" id="serverType" required onchange="handleServerTypeChange()">
+              <option value="">请选择类型</option>
+              <option value="SSH">SSH</option>
+              <option value="MySQL">MySQL</option>
+              <option value="Redis">Redis</option>
+              <option value="PostgreSQL">PostgreSQL</option>
+              <option value="MongoDB">MongoDB</option>
+              <option value="Nginx">Nginx</option>
+              <option value="Apache">Apache</option>
+              <option value="Web">网页</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="toggle-container" id="clusterModeContainer">
+            <span class="toggle-label">集群模式</span>
+            <label class="toggle">
+              <input type="checkbox" id="isCluster" onchange="toggleClusterMode()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group ip-single-container" id="ipSingleContainer">
+            <label class="form-label">IP地址 *</label>
+            <input type="text" class="form-input" id="serverIp" placeholder="如: 192.168.1.100" required>
+          </div>
+
+          <div class="form-group ip-array-container" id="ipArrayContainer">
+            <label class="form-label">IP地址列表 (每行一个)</label>
+            <textarea class="form-textarea ip-textarea" id="serverIps" placeholder="192.168.1.101&#10;192.168.1.102&#10;192.168.1.103"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group ip-port-container" id="ipPortContainer">
+              <label class="form-label">端口 *</label>
+              <input type="number" class="form-input" id="serverPort" placeholder="如: 22" required>
+            </div>
+            <div class="form-group ip-port-container" id="usernameContainer">
+              <label class="form-label">用户名 *</label>
+              <input type="text" class="form-input" id="serverUsername" placeholder="如: root" required>
+            </div>
+          </div>
+
+          <div class="form-group web-url-container hidden" id="webUrlContainer">
+            <label class="form-label">网址 *</label>
+            <input type="url" class="form-input" id="serverUrl" placeholder="如: https://example.com">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">密码 *</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="serverPassword" placeholder="请输入或生成密码" style="font-family: 'Cascadia Code', monospace; flex: 1;" required>
+              <button type="button" class="btn btn-secondary" onclick="copyFormPassword()" style="padding: 8px 12px;">复制</button>
+            </div>
+          </div>
+
+          <div class="password-generator">
+            <div class="password-generator-title">密码生成器</div>
+            <div class="password-preview">
+              <span id="passwordPreview">点击生成按钮创建密码</span>
+              <button type="button" class="copy-btn" onclick="copyPassword()">复制</button>
+            </div>
+            <div class="slider-container">
+              <span style="font-size: 12px; color: #64748b;">长度</span>
+              <input type="range" id="passwordLength" min="8" max="32" value="16" oninput="updateSliderValue()">
+              <span class="slider-value" id="sliderValue">16</span>
+            </div>
+            <div class="strength-indicator">
+              <div class="strength-bar" id="strength1"></div>
+              <div class="strength-bar" id="strength2"></div>
+              <div class="strength-bar" id="strength3"></div>
+              <div class="strength-bar" id="strength4"></div>
+            </div>
+            <button type="button" class="generate-btn" onclick="generatePassword()">生成密码</button>
+          </div>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label class="form-label">备注</label>
+            <textarea class="form-textarea" id="serverRemark" placeholder="可选备注信息"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">连接后自动执行命令 (每行一条)</label>
+            <textarea class="auto-cmd-input" id="autoCommands" placeholder="输入命令，每行一条，连接成功后自动执行"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" onclick="cancelForm()">取消</button>
+            <button type="submit" class="btn-save">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Export Modal -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">导出服务器</span>
+        <button class="modal-close" onclick="closeExportModal()">&times;</button>
+      </div>
+      <div style="color: #64748b; font-size: 14px; margin-bottom: 20px;">
+        选择导出格式
+      </div>
+      <div class="import-actions">
+        <button class="btn btn-primary" onclick="exportData('csv')">导出 CSV</button>
+        <button class="btn btn-primary" onclick="exportData('xlsx')">导出 Excel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal-overlay" id="importModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">导入服务器</span>
+        <button class="modal-close" onclick="closeImportModal()">&times;</button>
+      </div>
+      <div id="importContent">
+        <div style="color: #64748b; font-size: 14px; text-align: center; padding: 40px 0;">
+          点击选择文件导入
+        </div>
+      </div>
+      <div class="import-actions" id="importActions" style="display: none;">
+        <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
+        <button class="btn btn-primary" onclick="confirmImport()">确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">确认删除</span>
+        <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div id="deleteContent" style="color: #64748b; font-size: 14px; margin-bottom: 20px;">
+        确定要删除这条服务器记录吗？
+      </div>
+      <div class="import-actions">
+        <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Transfer Modal -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal" style="max-width: 900px;">
+      <div class="modal-header">
+        <span class="modal-title">文件传输</span>
+        <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+      </div>
+
+      <!-- Transfer Progress -->
+      <div id="transferProgress" style="display: none; margin-bottom: 16px;">
+        <div style="height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+          <div id="transferProgressBar" style="height: 100%; background: #2563eb; width: 0%; transition: width 0.3s;"></div>
+        </div>
+        <div id="transferStatus" style="font-size: 12px; color: #64748b; margin-top: 8px;"></div>
+      </div>
+
+      <!-- Two Panel File Browser -->
+      <div style="display: flex; gap: 16px; height: 400px;">
+        <!-- Local Panel -->
+        <div style="flex: 1; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+          <div style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 500; color: #475569;">本地文件</span>
+            <span id="localPathDisplay" style="margin-left: auto; font-size: 12px; color: #94a3b8;"></span>
+          </div>
+          <div id="localFileList" style="flex: 1; overflow-y: auto; padding: 8px;" ondragover="handleDragOver(event)" ondrop="handleLocalDrop(event)" ondragleave="handleDragLeave(event)">
+          </div>
+        </div>
+
+        <!-- Transfer Buttons -->
+        <div style="display: flex; flex-direction: column; justify-content: center; gap: 8px;">
+          <button class="btn btn-primary" id="uploadBtn" onclick="uploadSelected()" title="上传到服务器" style="padding: 10px 12px;"><img src="./public/images/sftp.png" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;background:transparent;border:none;">上传</button>
+          <button class="btn btn-secondary" id="downloadBtn" onclick="downloadSelected()" title="下载到本地" style="padding: 10px 12px;">⬇ 下载</button>
+        </div>
+
+        <!-- Remote Panel -->
+        <div style="flex: 1; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+          <div style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 500; color: #475569;">远程文件</span>
+            <span id="remotePathDisplay" style="margin-left: auto; font-size: 12px; color: #94a3b8;"></span>
+          </div>
+          <div id="remoteFileList" style="flex: 1; overflow-y: auto; padding: 8px;" ondragover="handleDragOver(event)" ondrop="handleRemoteDrop(event)" ondragleave="handleDragLeave(event)">
+          </div>
+        </div>
+      </div>
+
+      <!-- File Preview -->
+      <div id="filePreview" style="display: none; margin-top: 16px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span id="previewIcon" style="font-size: 32px;"></span>
+          <div>
+            <div id="previewName" style="font-weight: 500;"></div>
+            <div id="previewSize" style="font-size: 12px; color: #64748b;"></div>
+          </div>
+          <div style="margin-left: auto; display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="previewFile()">预览</button>
+            <button class="btn btn-primary" id="transferFileBtn" onclick="transferFile()">传输</button>
+          </div>
+        </div>
+        <div id="previewContent" style="margin-top: 12px; max-height: 200px; overflow: auto; font-family: 'Cascadia Code', monospace; font-size: 12px; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 4px; white-space: pre-wrap; word-break: break-all;"></div>
+      </div>
+
+      <div class="import-actions" style="margin-top: 16px;">
+        <button class="btn btn-secondary" onclick="closeUploadModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" onclick="editSelectedServer()">
+      编辑
+    </div>
+    <div class="context-menu-item" onclick="duplicateSelectedServer()">
+      复制
+    </div>
+    <div class="divider"></div>
+    <div class="context-menu-item" id="lockMenuItem" onclick="toggleLockSelectedServer()">
+      锁定
+    </div>
+    <div class="divider"></div>
+    <div class="context-menu-item danger" onclick="deleteSelectedServer()">
+      删除
+    </div>
+  </div>
+
+  <!-- File Context Menu -->
+  <div class="context-menu" id="fileContextMenu">
+    <div class="context-menu-item" onclick="deleteSelectedFile()">
+      删除
+    </div>
+  </div>
+
+  <link rel="stylesheet" href="./public/css/xterm.css">
+  <script src="./public/js/xterm.js"></script>
+  <script src="./public/js/addon-fit.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    let servers = [];
+    let selectedServerId = null;
+    let importData = null;
+    let deleteTargetId = null;
+    let editingServerId = null;
+    let selectedFileForDelete = null;
+    let selectedFileTypeForDelete = null;
+
+    // Terminal state
+    let activeTerminalId = null;
+    const terminalInstances = new Map();
+
+    // Load data on startup
+    document.addEventListener('DOMContentLoaded', async () => {
+      const data = await window.api.loadData();
+      servers = data.servers || [];
+      renderServerList();
+      // Get user's home path for downloads
+      userHomePath = await window.api.getUserPath();
+    });
+
+    function renderServerList() {
+      const listEl = document.getElementById('serverList');
+      const emptyEl = document.getElementById('emptyList');
+
+      // Remove existing items (except empty state)
+      const existingItems = listEl.querySelectorAll('.server-item');
+      existingItems.forEach(item => item.remove());
+
+      if (servers.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+
+      servers.forEach(server => {
+        const item = document.createElement('div');
+        item.className = 'server-item' + (server.id === selectedServerId ? ' selected' : '');
+        item.dataset.id = server.id;
+
+        const typeIcon = server.type === 'SSH' ? '<img src="./public/images/remote_desktop.png" style="width:30px;height:30px;background:transparent;border:none;display:block;margin:0 auto;">' : server.type.substring(0, 2).toUpperCase();
+        const lockIcon = server.isLocked ? '🔒' : '';
+        const displayIp = server.isCluster
+          ? `${server.ips.length}个IP`
+          : (server.ips && server.ips[0]) || (server.url || 'N/A');
+        const displayPort = server.port || '';
+
+        item.innerHTML = `
+          <div class="server-item-header">
+            <div class="server-type-icon">${typeIcon}</div>
+            <span class="server-name">${server.type}${lockIcon}</span>
+          </div>
+          <div class="server-meta">${server.type === 'Web' ? server.url : displayIp + (displayPort ? ':' + displayPort : '')}</div>
+          <div class="server-actions">
+            <button class="server-connect" onclick="event.stopPropagation(); connectToServer('${server.id}')" title="连接"><img src="./public/images/link.png" style="width:18px;height:18px;background:transparent;border:none;"></button>
+            <button class="server-upload" onclick="event.stopPropagation(); showUploadModal('${server.id}')" title="上传文件"><img src="./public/images/sftp.png" style="width:18px;height:18px;background:transparent;border:none;"></button>
+            ${server.isLocked ? '' : `<button class="server-delete" onclick="event.stopPropagation(); showDeleteConfirm('${server.id}')" title="删除"><img src="./public/images/delete.png" style="width:18px;height:18px;background:transparent;border:none;"></button>`}
+          </div>
+        `;
+
+        item.addEventListener('click', () => selectServer(server.id));
+        item.addEventListener('contextmenu', (e) => showContextMenu(e, server.id));
+
+        listEl.appendChild(item);
+      });
+    }
+
+    function selectServer(id) {
+      selectedServerId = id;
+      editingServerId = id;
+
+      // Update selected state
+      document.querySelectorAll('.server-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.id === id);
+      });
+
+      const server = servers.find(s => s.id === id);
+      if (server) {
+        showEditForm(server);
+      }
+    }
+
+    function showAddForm() {
+      selectedServerId = null;
+      editingServerId = null;
+      document.getElementById('formTitle').textContent = '新增服务器';
+      document.getElementById('serverForm').reset();
+      document.getElementById('serverId').value = '';
+      document.getElementById('isCluster').checked = false;
+      toggleClusterMode();
+      handleServerTypeChange();
+      document.getElementById('passwordPreview').textContent = '点击生成按钮创建密码';
+      resetStrengthIndicator();
+      document.getElementById('welcomeState').style.display = 'none';
+      document.getElementById('detailCard').style.display = 'block';
+    }
+
+    function showEditForm(server) {
+      document.getElementById('formTitle').textContent = '编辑服务器';
+      document.getElementById('serverId').value = server.id;
+      document.getElementById('serverType').value = server.type;
+      document.getElementById('serverRemark').value = server.remark || '';
+      document.getElementById('autoCommands').value = server.autoCommands || '';
+      handleServerTypeChange();
+
+      if (server.type === 'Web') {
+        document.getElementById('serverUrl').value = server.url || '';
+      } else {
+        document.getElementById('isCluster').checked = server.isCluster;
+        toggleClusterMode();
+        document.getElementById('serverPort').value = server.port;
+        document.getElementById('serverUsername').value = server.username;
+        document.getElementById('serverPassword').value = server.password;
+        document.getElementById('passwordPreview').textContent = server.password;
+        updatePasswordStrength(server.password);
+
+        if (server.isCluster) {
+          document.getElementById('serverIps').value = (server.ips || []).join('\n');
+        } else {
+          document.getElementById('serverIp').value = (server.ips && server.ips[0]) || '';
+        }
+      }
+
+      document.getElementById('welcomeState').style.display = 'none';
+      document.getElementById('detailCard').style.display = 'block';
+    }
+
+    function handleServerTypeChange() {
+      const serverType = document.getElementById('serverType').value;
+      const ipPortContainers = document.querySelectorAll('.ip-port-container');
+      const ipSingleContainer = document.getElementById('ipSingleContainer');
+      const ipArrayContainer = document.getElementById('ipArrayContainer');
+      const webUrlContainer = document.getElementById('webUrlContainer');
+      const clusterModeContainer = document.getElementById('clusterModeContainer');
+
+      // 需要集群模式的类型：MySQL、Redis、PostgreSQL、MongoDB等数据库类型
+      const needsClusterMode = ['MySQL', 'Redis', 'PostgreSQL', 'MongoDB', 'Nginx', 'Apache', 'Other'].includes(serverType);
+
+      if (serverType === 'Web') {
+        ipPortContainers.forEach(el => el.classList.add('hidden'));
+        ipSingleContainer.classList.add('hidden');
+        ipArrayContainer.classList.add('hidden');
+        webUrlContainer.classList.remove('hidden');
+        clusterModeContainer.classList.add('hidden');
+        // 网页类型不需要这些字段
+        document.getElementById('serverPort').required = false;
+        document.getElementById('serverUsername').required = false;
+        document.getElementById('serverPassword').required = false;
+        document.getElementById('serverUrl').required = true;
+      } else {
+        ipPortContainers.forEach(el => el.classList.remove('hidden'));
+        ipSingleContainer.classList.remove('hidden');
+        webUrlContainer.classList.add('hidden');
+        clusterModeContainer.classList.toggle('hidden', !needsClusterMode);
+        document.getElementById('serverPort').required = true;
+        document.getElementById('serverUsername').required = true;
+        document.getElementById('serverPassword').required = true;
+        document.getElementById('serverUrl').required = false;
+      }
+    }
+
+    function toggleClusterMode() {
+      const isCluster = document.getElementById('isCluster').checked;
+      const singleContainer = document.getElementById('ipSingleContainer');
+      const arrayContainer = document.getElementById('ipArrayContainer');
+
+      if (isCluster) {
+        singleContainer.classList.add('hidden');
+        arrayContainer.classList.add('visible');
+        document.getElementById('serverIp').required = false;
+        document.getElementById('serverIps').required = true;
+      } else {
+        singleContainer.classList.remove('hidden');
+        arrayContainer.classList.remove('visible');
+        document.getElementById('serverIp').required = true;
+        document.getElementById('serverIps').required = false;
+      }
+    }
+
+    function saveServer(event) {
+      event.preventDefault();
+
+      const id = document.getElementById('serverId').value || generateId();
+      const serverType = document.getElementById('serverType').value;
+      const isCluster = document.getElementById('isCluster').checked;
+
+      // 获取现有服务器的锁定状态
+      const existingServer = servers.find(s => s.id === id);
+      const isLocked = existingServer ? existingServer.isLocked : false;
+
+      const serverData = {
+        id,
+        type: serverType,
+        isCluster,
+        isLocked,
+        remark: document.getElementById('serverRemark').value,
+        autoCommands: document.getElementById('autoCommands').value,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (serverType === 'Web') {
+        serverData.url = document.getElementById('serverUrl').value;
+      } else {
+        const ips = isCluster
+          ? document.getElementById('serverIps').value.split('\n').map(ip => ip.trim()).filter(ip => ip)
+          : [document.getElementById('serverIp').value.trim()];
+        serverData.ips = ips;
+        serverData.port = parseInt(document.getElementById('serverPort').value);
+        serverData.username = document.getElementById('serverUsername').value;
+        serverData.password = document.getElementById('serverPassword').value;
+      }
+
+      const existingIndex = servers.findIndex(s => s.id === id);
+      if (existingIndex >= 0) {
+        serverData.createdAt = servers[existingIndex].createdAt;
+        servers[existingIndex] = serverData;
+      } else {
+        serverData.createdAt = new Date().toISOString();
+        servers.push(serverData);
+      }
+
+      window.api.saveData({ servers }).then(() => {
+        renderServerList();
+        cancelForm();
+        showToast('保存成功');
+      });
+    }
+
+    function cancelForm() {
+      selectedServerId = null;
+      editingServerId = null;
+      document.getElementById('detailCard').style.display = 'none';
+      document.getElementById('welcomeState').style.display = 'flex';
+      document.getElementById('serverForm').reset();
+      document.querySelectorAll('.server-item').forEach(item => item.classList.remove('selected'));
+    }
+
+    // Password Generator
+    const SPECIAL_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const LOWER = 'abcdefghijklmnopqrstuvwxyz';
+    const NUMBERS = '0123456789';
+    const OTHER_CHARS = UPPER + LOWER + NUMBERS;
+
+    function generatePassword() {
+      const length = parseInt(document.getElementById('passwordLength').value);
+
+      // Calculate count: special:other = 1:7
+      // total = special + other, special/other = 1/7
+      // special = total * 1/8, other = total * 7/8
+      const specialCount = Math.max(1, Math.floor(length / 8));
+      const otherCount = length - specialCount;
+
+      const password = [];
+
+      // Ensure at least 1 of each type
+      password.push(SPECIAL_CHARS[Math.floor(Math.random() * SPECIAL_CHARS.length)]);
+      password.push(UPPER[Math.floor(Math.random() * UPPER.length)]);
+      password.push(LOWER[Math.floor(Math.random() * LOWER.length)]);
+      password.push(NUMBERS[Math.floor(Math.random() * NUMBERS.length)]);
+
+      // Fill remaining with other chars (already have 4, so reduce counts)
+      const remainingSpecial = specialCount - 1;
+      const remainingOther = otherCount - 3;
+
+      for (let i = 0; i < remainingSpecial; i++) {
+        password.push(SPECIAL_CHARS[Math.floor(Math.random() * SPECIAL_CHARS.length)]);
+      }
+
+      for (let i = 0; i < remainingOther; i++) {
+        password.push(OTHER_CHARS[Math.floor(Math.random() * OTHER_CHARS.length)]);
+      }
+
+      // Shuffle
+      for (let i = password.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [password[i], password[j]] = [password[j], password[i]];
+      }
+
+      const pwd = password.join('');
+      document.getElementById('passwordPreview').textContent = pwd;
+      document.getElementById('serverPassword').value = pwd;
+      updatePasswordStrength(pwd);
+    }
+
+    function updateSliderValue() {
+      document.getElementById('sliderValue').textContent = document.getElementById('passwordLength').value;
+    }
+
+    function updatePasswordStrength(password) {
+      const bars = [
+        document.getElementById('strength1'),
+        document.getElementById('strength2'),
+        document.getElementById('strength3'),
+        document.getElementById('strength4')
+      ];
+
+      let strength = 0;
+      if (password.length >= 8) strength++;
+      if (password.length >= 12) strength++;
+      if (/[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password)) strength++;
+      if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) strength++;
+
+      bars.forEach((bar, i) => {
+        bar.classList.remove('active', 'weak', 'medium', 'strong');
+        if (i < strength) {
+          bar.classList.add('active');
+          if (strength <= 2) bar.classList.add('weak');
+          else if (strength <= 3) bar.classList.add('medium');
+          else bar.classList.add('strong');
+        }
+      });
+    }
+
+    function resetStrengthIndicator() {
+      const bars = [
+        document.getElementById('strength1'),
+        document.getElementById('strength2'),
+        document.getElementById('strength3'),
+        document.getElementById('strength4')
+      ];
+      bars.forEach(bar => bar.classList.remove('active', 'weak', 'medium', 'strong'));
+    }
+
+    function copyPassword() {
+      const pwd = document.getElementById('passwordPreview').textContent;
+      if (pwd && pwd !== '点击生成按钮创建密码') {
+        navigator.clipboard.writeText(pwd);
+        showToast('密码已复制');
+      }
+    }
+
+    function copyFormPassword() {
+      const pwd = document.getElementById('serverPassword').value;
+      if (pwd) {
+        navigator.clipboard.writeText(pwd);
+        showToast('密码已复制');
+      }
+    }
+
+    function generateId() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // Export functions
+    function showExportModal() {
+      document.getElementById('exportModal').classList.add('visible');
+    }
+
+    function closeExportModal() {
+      document.getElementById('exportModal').classList.remove('visible');
+    }
+
+    async function exportData(format) {
+      closeExportModal();
+
+      if (servers.length === 0) {
+        showToast('没有可导出的数据', true);
+        return;
+      }
+
+      const exportData = servers.map(s => ({
+        '类型': s.type,
+        '集群': s.isCluster ? '是' : '否',
+        'IP地址': s.isCluster ? s.ips.join('; ') : s.ips[0],
+        '端口': s.port,
+        '用户名': s.username,
+        '密码': s.password,
+        '备注': s.remark || '',
+        '创建时间': s.createdAt,
+        '更新时间': s.updatedAt
+      }));
+
+      let fileData;
+      let mimeType;
+
+      if (format === 'csv') {
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        fileData = csv;
+        mimeType = 'text/csv;charset=utf-8';
+      } else {
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Servers');
+        fileData = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        fileData = new Uint8Array(fileData);
+        mimeType = 'application/octet-stream';
+      }
+
+      const blob = new Blob([fileData], { type: mimeType });
+      const base64 = btoa(String.fromCharCode.apply(null, new Uint8Array(blob)));
+
+      const result = await window.api.exportFile({ data: base64, format });
+      if (result.success) {
+        showToast('导出成功');
+      }
+    }
+
+    // Import functions
+    function showImportModal() {
+      document.getElementById('importModal').classList.add('visible');
+      document.getElementById('importContent').innerHTML = `
+        <div style="color: #64748b; font-size: 14px; text-align: center; padding: 40px 0;">
+          点击选择文件导入
+        </div>
+      `;
+      document.getElementById('importActions').style.display = 'none';
+
+      // Trigger file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv,.xlsx,.xls';
+      input.onchange = handleImportFile;
+      input.click();
+    }
+
+    async function handleImportFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet);
+
+          if (json.length === 0) {
+            document.getElementById('importContent').innerHTML = `
+              <div style="color: #ef4444; font-size: 14px; text-align: center; padding: 40px 0;">
+                文件中没有找到数据
+              </div>
+            `;
+            return;
+          }
+
+          importData = json;
+          const preview = json.slice(0, 5);
+
+          document.getElementById('importContent').innerHTML = `
+            <div style="color: #64748b; font-size: 14px; margin-bottom: 12px;">
+              预览 (前5条，共${json.length}条)
+            </div>
+            <table class="import-table">
+              <thead>
+                <tr>
+                  <th>类型</th>
+                  <th>IP</th>
+                  <th>端口</th>
+                  <th>用户名</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${preview.map(row => `
+                  <tr>
+                    <td>${row['类型'] || row['type'] || ''}</td>
+                    <td>${row['IP地址'] || row['IP'] || ''}</td>
+                    <td>${row['端口'] || row['port'] || ''}</td>
+                    <td>${row['用户名'] || row['username'] || ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+          document.getElementById('importActions').style.display = 'flex';
+        } catch (err) {
+          document.getElementById('importContent').innerHTML = `
+            <div style="color: #ef4444; font-size: 14px; text-align: center; padding: 40px 0;">
+              解析文件失败: ${err.message}
+            </div>
+          `;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').classList.remove('visible');
+      importData = null;
+    }
+
+    async function confirmImport() {
+      if (!importData || importData.length === 0) return;
+
+      let added = 0;
+      importData.forEach(row => {
+        const ips = row['IP地址'] || row['IP'] || '';
+        const isCluster = ips.includes(';');
+        const ipArray = isCluster
+          ? ips.split(';').map(ip => ip.trim())
+          : [ips.trim()];
+
+        const newServer = {
+          id: generateId(),
+          type: row['类型'] || row['type'] || 'Other',
+          isCluster,
+          ips: ipArray,
+          port: parseInt(row['端口'] || row['port'] || 0),
+          username: row['用户名'] || row['username'] || '',
+          password: row['密码'] || row['password'] || '',
+          remark: row['备注'] || row['remark'] || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        if (newServer.port && newServer.username) {
+          servers.push(newServer);
+          added++;
+        }
+      });
+
+      await window.api.saveData({ servers });
+      renderServerList();
+      closeImportModal();
+      showToast(`成功导入 ${added} 条记录`);
+    }
+
+    // Delete functions
+    function showDeleteConfirm(id) {
+      deleteTargetId = id;
+      document.getElementById('deleteContent').textContent = '确定要删除这条服务器记录吗？';
+      document.getElementById('deleteModal').classList.add('visible');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('visible');
+      deleteTargetId = null;
+    }
+
+    async function confirmDelete() {
+      if (deleteTargetId) {
+        servers = servers.filter(s => s.id !== deleteTargetId);
+        await window.api.saveData({ servers });
+
+        if (selectedServerId === deleteTargetId) {
+          cancelForm();
+        }
+
+        renderServerList();
+        showToast('删除成功');
+      }
+      closeDeleteModal();
+    }
+
+    // Context menu
+    function showContextMenu(event, id) {
+      event.preventDefault();
+      selectedServerId = id;
+
+      const server = servers.find(s => s.id === id);
+      const lockMenuItem = document.getElementById('lockMenuItem');
+      if (server && lockMenuItem) {
+        lockMenuItem.textContent = server.isLocked ? '解锁' : '锁定';
+      }
+
+      const menu = document.getElementById('contextMenu');
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.classList.add('visible');
+
+      document.addEventListener('click', hideContextMenu, { once: true });
+    }
+
+    function hideContextMenu() {
+      document.getElementById('contextMenu').classList.remove('visible');
+    }
+
+    function editSelectedServer() {
+      if (selectedServerId) {
+        selectServer(selectedServerId);
+      }
+    }
+
+    function duplicateSelectedServer() {
+      if (selectedServerId) {
+        const server = servers.find(s => s.id === selectedServerId);
+        if (server) {
+          const newServer = { ...server, id: generateId() };
+          servers.push(newServer);
+          window.api.saveData({ servers }).then(renderServerList);
+        }
+      }
+    }
+
+    function deleteSelectedServer() {
+      if (selectedServerId) {
+        showDeleteConfirm(selectedServerId);
+      }
+    }
+
+    function toggleLockSelectedServer() {
+      if (selectedServerId) {
+        const server = servers.find(s => s.id === selectedServerId);
+        if (server) {
+          server.isLocked = !server.isLocked;
+          window.api.saveData({ servers }).then(() => {
+            renderServerList();
+            showToast(server.isLocked ? '已锁定' : '已解锁');
+          });
+        }
+      }
+    }
+
+    // Fix for binary export
+    window.api.exportFile = async ({ data, format }) => {
+      const result = await window.api.exportFile({ data, format });
+      return result;
+    };
+
+    function showToast(message, isError = false) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.className = 'toast visible' + (isError ? ' error' : '');
+      setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 2000);
+    }
+
+    // ============ Terminal Functions ============
+    async function createLocalTerminal() {
+      const termId = `local-${Date.now()}`;
+      const result = await window.api.terminal.create({ id: termId });
+
+      if (result.success) {
+        addTerminalTab(termId, '本地终端', 'local');
+        initTerminal(termId);
+      } else {
+        showToast('创建终端失败: ' + result.error, true);
+      }
+    }
+
+    async function connectToServer(serverId) {
+      const server = servers.find(s => s.id === serverId);
+      if (!server) {
+        showToast('服务器不存在', true);
+        return;
+      }
+
+      if (server.type === 'Web') {
+        // 网页类型直接打开网址
+        if (server.url) {
+          window.open(server.url, '_blank');
+        } else {
+          showToast('请先填写网址', true);
+        }
+        return;
+      }
+
+      const result = await window.api.sshConnect(server);
+
+      if (result.success) {
+        const termId = result.id;
+        addTerminalTab(termId, `${server.type} ${server.ips[0]}`, 'ssh', serverId);
+        initTerminal(termId);
+        switchToTerminalView();
+      } else {
+        showToast('连接失败: ' + result.error, true);
+      }
+    }
+
+    function addTerminalTab(termId, title, type, serverId = null) {
+      const tabsContainer = document.getElementById('terminalTabs');
+      const contentsContainer = document.getElementById('terminalContents');
+
+      const tab = document.createElement('div');
+      tab.className = 'terminal-tab active';
+      tab.dataset.termId = termId;
+      tab.innerHTML = `
+        <span class="terminal-tab-title">${title}</span>
+        <span class="terminal-tab-close" onclick="event.stopPropagation(); closeTerminal('${termId}')">&times;</span>
+      `;
+      tab.onclick = () => switchTerminal(termId);
+
+      // Insert before the + button
+      const newTabBtn = tabsContainer.querySelector('.terminal-new-tab');
+      tabsContainer.insertBefore(tab, newTabBtn);
+
+      // Create terminal content
+      const content = document.createElement('div');
+      content.className = 'terminal-content active';
+      content.id = `term-content-${termId}`;
+      content.innerHTML = `<div class="terminal-wrapper" id="term-wrapper-${termId}"></div>`;
+      contentsContainer.appendChild(content);
+
+      // Store terminal info
+      terminalInstances.set(termId, { type, serverId, title });
+
+      switchTerminal(termId);
+    }
+
+    function switchTerminal(termId) {
+      // Update tabs
+      document.querySelectorAll('.terminal-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.termId === termId);
+      });
+
+      // Update contents
+      document.querySelectorAll('.terminal-content').forEach(content => {
+        content.classList.toggle('active', content.id === `term-content-${termId}`);
+      });
+
+      activeTerminalId = termId;
+
+      // Fit terminal
+      const term = terminalInstances.get(termId);
+      if (term && term.terminal) {
+        term.terminal.fit();
+      }
+    }
+
+    function closeTerminal(termId) {
+      const term = terminalInstances.get(termId);
+      if (term) {
+        if (term.terminal) {
+          term.terminal.dispose();
+        }
+        if (term.cleanupData) term.cleanupData();
+        if (term.cleanupExit) term.cleanupExit();
+        terminalInstances.delete(termId);
+      }
+
+      // Remove tab and content
+      const tab = document.querySelector(`.terminal-tab[data-term-id="${termId}"]`);
+      if (tab) tab.remove();
+
+      const content = document.getElementById(`term-content-${termId}`);
+      if (content) content.remove();
+
+      // Switch to another terminal or back to list
+      if (activeTerminalId === termId) {
+        const remaining = document.querySelector('.terminal-tab');
+        if (remaining) {
+          switchTerminal(remaining.dataset.termId);
+        } else {
+          activeTerminalId = null;
+          switchToListView();
+        }
+      }
+    }
+
+    async function initTerminal(termId) {
+      const wrapper = document.getElementById(`term-wrapper-${termId}`);
+      if (!wrapper) {
+        console.error('Terminal wrapper not found:', termId);
+        return;
+      }
+
+      const TerminalClass = window.Terminal;
+      // Handle ES module - the class is in .default
+      let FitAddonClass = window.FitAddon;
+      console.log('FitAddon keys:', Object.keys(FitAddonClass));
+      console.log('FitAddon.__esModule:', FitAddonClass.__esModule);
+      if (FitAddonClass.__esModule) {
+        console.log('FitAddon.default:', FitAddonClass.default);
+        FitAddonClass = FitAddonClass.default;
+      }
+      console.log('Final FitAddonClass:', typeof FitAddonClass, FitAddonClass);
+
+      console.log('TerminalClass:', typeof TerminalClass, TerminalClass);
+      console.log('FitAddonClass:', typeof FitAddonClass, FitAddonClass);
+
+      if (!TerminalClass) {
+        console.error('xterm Terminal not loaded');
+        return;
+      }
+
+      // Set explicit size for xterm
+      wrapper.style.height = '100%';
+      wrapper.style.width = '100%';
+      wrapper.style.display = 'block';
+
+      const term = new TerminalClass({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: '"Cascadia Code", "Consolas", monospace',
+        theme: {
+          background: '#1e1e1e',
+          foreground: '#cccccc',
+          cursor: '#ffffff'
+        },
+        rows: 24,
+        cols: 80
+      });
+
+      term.open(wrapper);
+
+      // Delay to ensure DOM is ready
+      setTimeout(() => {
+        term.resize(80, 24);
+        term.focus();
+      }, 100);
+
+      // Store terminal instance
+      const termInfo = terminalInstances.get(termId);
+      termInfo.terminal = term;
+
+      // Handle data from backend
+      const cleanupData = window.api.terminal.onData(termId, (data) => {
+        term.write(data);
+      });
+
+      const cleanupExit = window.api.terminal.onExit(termId, () => {
+        term.write('\r\n[连接已关闭]\r\n');
+      });
+
+      termInfo.cleanupData = cleanupData;
+      termInfo.cleanupExit = cleanupExit;
+
+      // Handle resize
+      const resizeObserver = new ResizeObserver(() => {
+        if (termInfo.terminal && wrapper.offsetWidth > 0) {
+          const cols = Math.floor(wrapper.offsetWidth / 9);
+          const rows = Math.floor(wrapper.offsetHeight / 18);
+          term.resize(Math.max(80, cols), Math.max(24, rows));
+          window.api.terminal.resize(termId, term.cols, term.rows);
+        }
+      });
+      resizeObserver.observe(wrapper);
+
+      // Send data to backend
+      term.onData((data) => {
+        window.api.terminal.write(termId, data);
+      });
+
+      // Focus terminal
+      term.focus();
+
+      // If SSH with auto commands, execute them
+      if (termInfo.type === 'ssh' && termInfo.serverId) {
+        const server = servers.find(s => s.id === termInfo.serverId);
+        if (server && server.autoCommands) {
+          const commands = server.autoCommands.split('\n').filter(c => c.trim());
+          let delay = 500;
+          commands.forEach(cmd => {
+            setTimeout(() => {
+              window.api.terminal.write(termId, cmd + '\r');
+            }, delay);
+            delay += 300;
+          });
+        }
+      }
+    }
+
+    // ============ Upload Functions ============
+    let uploadTargetServerId = null;
+    let selectedUploadFile = null;
+    let selectedLocalFile = null;
+    let selectedRemoteFile = null;
+    let localPath = '';
+    let remotePath = '/home/';
+    let userHomePath = '';
+
+    function showUploadModal(serverId) {
+      uploadTargetServerId = serverId;
+      const server = servers.find(s => s.id === serverId);
+      if (!server) {
+        showToast('服务器不存在', true);
+        return;
+      }
+
+      // Set remote path based on server username (root uses /root)
+      if (server.username === 'root') {
+        remotePath = '/root/';
+      } else if (server.username) {
+        remotePath = `/home/${server.username}/`;
+      } else {
+        remotePath = '/tmp/';
+      }
+      // Use userData path from main process for downloads
+      localPath = userHomePath + '\\Desktop';
+
+      selectedLocalFile = null;
+      selectedRemoteFile = null;
+
+      document.getElementById('localPathDisplay').textContent = localPath;
+      document.getElementById('remotePathDisplay').textContent = remotePath;
+      document.getElementById('filePreview').style.display = 'none';
+      document.getElementById('transferProgress').style.display = 'none';
+
+      loadLocalFiles();
+      loadRemoteFiles();
+
+      document.getElementById('uploadModal').classList.add('visible');
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').classList.remove('visible');
+      uploadTargetServerId = null;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    }
+
+    function getFileIcon(file) {
+      if (file.isDir) return '📁';
+      const ext = file.name.split('.').pop().toLowerCase();
+      const icons = {
+        'js': '📜', 'json': '📋', 'html': '🌐', 'css': '🎨',
+        'png': '🖼', 'jpg': '🖼', 'jpeg': '🖼', 'gif': '🖼',
+        'pdf': '📕', 'doc': '📘', 'docx': '📘', 'xls': '📗', 'xlsx': '📗',
+        'zip': '🗜', 'rar': '🗜', 'tar': '🗜', 'gz': '🗜',
+        'txt': '📄', 'md': '📝', 'log': '📝',
+        'exe': '⚙', 'dll': '⚙', 'msi': '⚙',
+        'mp3': '🎵', 'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬',
+        'sql': '🗃', 'db': '🗃'
+      };
+      return icons[ext] || '📄';
+    }
+
+    async function loadLocalFiles() {
+      const fileList = document.getElementById('localFileList');
+
+      // Navigate up button
+      let parentPath = localPath.replace(/\\[^\\]+\\?$/, '');
+
+      const result = await window.api.listLocalDir({ dirPath: localPath });
+
+      if (result.success) {
+        let html = `
+          <div style="display: flex; align-items: center; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; margin-bottom: 8px;">
+            <button onclick="navigateLocalDir('${parentPath}')" style="background: none; border: none; cursor: pointer; padding: 4px 8px; color: #64748b;">⬆</button>
+            <span style="font-size: 12px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${localPath}</span>
+          </div>
+        `;
+
+        // Sort: directories first
+        const dirs = result.files.filter(f => f.isDir).sort((a, b) => a.name.localeCompare(b.name));
+        const files = result.files.filter(f => f.isFile).sort((a, b) => a.name.localeCompare(b.name));
+
+        [...dirs, ...files].forEach(file => {
+          const icon = file.isDir ? '📁' : getFileIcon(file);
+          const size = file.isDir ? '文件夹' : formatFileSize(file.size || 0);
+          const escapedPath = file.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          html += `
+            <div class="local-file-item"
+              onclick="selectLocalFile('${file.name.replace(/'/g, "\\'")}', ${file.isDir}, '${escapedPath}', ${file.size || 0})"
+              ondblclick="${file.isDir ? `navigateLocalDir('${escapedPath}')` : ''}"
+              oncontextmenu="showLocalFileContextMenu(event, '${file.name.replace(/'/g, "\\'")}', ${file.isDir}, '${escapedPath}', ${file.size || 0})"
+              draggable="${!file.isDir}"
+              ondragstart="handleLocalDragStart(event, '${escapedPath}', ${file.isDir})"
+              style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 4px; margin-bottom: 4px;"
+              onmouseover="this.style.background='#f1f5f9'"
+              onmouseout="this.style.background='transparent'">
+              <span style="font-size: 18px;">${icon}</span>
+              <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</span>
+              <span style="font-size: 11px; color: #94a3b8;">${size}</span>
+            </div>
+          `;
+        });
+
+        fileList.innerHTML = html;
+      } else {
+        fileList.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #ef4444;">
+            <div>${result.error}</div>
+          </div>
+        `;
+      }
+    }
+
+    function navigateLocalDir(path) {
+      localPath = path;
+      document.getElementById('localPathDisplay').textContent = localPath;
+      loadLocalFiles();
+    }
+
+    function selectLocalFile(name, isDir, fullPath, size) {
+      selectedLocalFile = { name, isDir, size, path: fullPath };
+      showFilePreview(selectedLocalFile, 'local');
+      document.getElementById('previewContent').textContent = '';
+    }
+
+    function showLocalFileContextMenu(event, name, isDir, fullPath, size) {
+      event.preventDefault();
+      event.stopPropagation();
+      selectedFileForDelete = { name, isDir, size, path: fullPath };
+      selectedFileTypeForDelete = 'local';
+      const menu = document.getElementById('fileContextMenu');
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.classList.add('visible');
+      document.addEventListener('click', hideFileContextMenu, { once: true });
+    }
+
+    function hideFileContextMenu() {
+      document.getElementById('fileContextMenu').classList.remove('visible');
+    }
+
+    async function deleteSelectedFile() {
+      if (!selectedFileForDelete) return;
+      hideFileContextMenu();
+
+      if (!confirm(`确定要删除 "${selectedFileForDelete.name}" 吗？${selectedFileForDelete.isDir ? '（文件夹）' : ''}`)) {
+        return;
+      }
+
+      if (selectedFileTypeForDelete === 'local') {
+        const result = await window.api.deleteLocalFile({ filePath: selectedFileForDelete.path });
+        if (result.success) {
+          showToast('删除成功');
+          loadLocalFiles();
+        } else {
+          showToast('删除失败: ' + result.error, true);
+        }
+      } else if (selectedFileTypeForDelete === 'remote') {
+        const server = servers.find(s => s.id === uploadTargetServerId);
+        if (!server) {
+          showToast('服务器不存在', true);
+          return;
+        }
+        const result = await window.api.deleteRemoteFile({ server, remotePath: selectedFileForDelete.path });
+        if (result.success) {
+          showToast('删除成功');
+          loadRemoteFiles();
+        } else {
+          showToast('删除失败: ' + result.error, true);
+        }
+      }
+      selectedFileForDelete = null;
+    }
+
+    function handleLocalDragStart(event, path, isDir) {
+      event.dataTransfer.setData('text/plain', path);
+      event.dataTransfer.setData('isDirectory', isDir.toString());
+    }
+
+    async function loadRemoteFiles() {
+      const server = servers.find(s => s.id === uploadTargetServerId);
+      if (!server) return;
+
+      const fileList = document.getElementById('remoteFileList');
+      fileList.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: #64748b;">
+          <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+          <div>加载中...</div>
+        </div>
+      `;
+
+      const result = await window.api.listRemoteDir({ server, dirPath: remotePath });
+
+      if (result.success) {
+        renderRemoteFileList(result.files);
+      } else {
+        fileList.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #ef4444;">
+            <div style="font-size: 32px; margin-bottom: 8px;">❌</div>
+            <div>${result.error}</div>
+          </div>
+        `;
+      }
+    }
+
+    function renderRemoteFileList(files) {
+      const fileList = document.getElementById('remoteFileList');
+
+      if (files.length === 0) {
+        fileList.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #94a3b8;">
+            目录为空
+          </div>
+        `;
+        return;
+      }
+
+      // Sort: directories first, then files
+      files.sort((a, b) => {
+        if (a.isDir && !b.isDir) return -1;
+        if (!a.isDir && b.isDir) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      let html = '';
+      files.forEach(file => {
+        const icon = getFileIcon(file);
+        html += `
+          <div class="remote-file-item"
+            onclick="selectRemoteFile('${file.name}', ${file.isDir}, '${file.path}', ${file.size})"
+            ondblclick="${file.isDir ? `navigateRemoteDir('${file.path}')` : ''}"
+            oncontextmenu="showRemoteFileContextMenu(event, '${file.name}', ${file.isDir}, '${file.path}', ${file.size})"
+            draggable="true"
+            ondragstart="handleRemoteDragStart(event, '${file.path}', ${file.isDir})"
+            style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-radius: 4px; margin-bottom: 4px;"
+            onmouseover="this.style.background='#f1f5f9'"
+            onmouseout="this.style.background='transparent'">
+            <span style="font-size: 18px;">${icon}</span>
+            <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</span>
+            <span style="font-size: 11px; color: #94a3b8;">${file.isDir ? '文件夹' : formatFileSize(file.size)}</span>
+          </div>
+        `;
+      });
+
+      fileList.innerHTML = html;
+    }
+
+    function selectRemoteFile(name, isDir, fullPath, size) {
+      selectedRemoteFile = { name, isDir, size, path: fullPath };
+      showFilePreview(selectedRemoteFile, 'remote');
+      document.getElementById('previewContent').textContent = '';
+    }
+
+    function showRemoteFileContextMenu(event, name, isDir, fullPath, size) {
+      event.preventDefault();
+      event.stopPropagation();
+      selectedFileForDelete = { name, isDir, size, path: fullPath };
+      selectedFileTypeForDelete = 'remote';
+      const menu = document.getElementById('fileContextMenu');
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.classList.add('visible');
+      document.addEventListener('click', hideFileContextMenu, { once: true });
+    }
+
+    function navigateRemoteDir(path) {
+      remotePath = path;
+      document.getElementById('remotePathDisplay').textContent = remotePath;
+      loadRemoteFiles();
+    }
+
+    function showFilePreview(file, source) {
+      document.getElementById('filePreview').style.display = 'block';
+      document.getElementById('previewIcon').textContent = getFileIcon(file);
+      document.getElementById('previewName').textContent = file.name;
+      document.getElementById('previewSize').textContent = file.isDir ? '文件夹' : formatFileSize(file.size);
+      document.getElementById('transferFileBtn').textContent = source === 'local' ? '上传' : '下载';
+      document.getElementById('transferFileBtn').onclick = source === 'local' ? uploadSelected : downloadSelected;
+    }
+
+    async function previewFile() {
+      if (!selectedRemoteFile || selectedRemoteFile.isDir) {
+        showToast('请选择一个文件预览', true);
+        return;
+      }
+
+      const server = servers.find(s => s.id === uploadTargetServerId);
+      if (!server) {
+        showToast('服务器不存在', true);
+        return;
+      }
+
+      const previewContent = document.getElementById('previewContent');
+      previewContent.textContent = '加载中...';
+
+      try {
+        const result = await window.api.readRemoteFile({
+          server,
+          remotePath: selectedRemoteFile.path
+        });
+
+        if (result.success) {
+          previewContent.textContent = result.data;
+        } else {
+          previewContent.textContent = '预览失败: ' + result.error;
+        }
+      } catch (err) {
+        previewContent.textContent = '预览失败: ' + err.message;
+      }
+    }
+
+    function handleDragOver(event) {
+      event.preventDefault();
+      event.currentTarget.style.background = '#f1f5f9';
+    }
+
+    function handleDragLeave(event) {
+      event.currentTarget.style.background = 'transparent';
+    }
+
+    function handleLocalDrop(event) {
+      event.preventDefault();
+      event.currentTarget.style.background = 'transparent';
+      // Browser can't handle dropped files from file system easily
+      showToast('请使用"选择文件"按钮选择文件', true);
+    }
+
+    function handleRemoteDragStart(event, path, isDir) {
+      event.dataTransfer.setData('text/plain', path);
+      event.dataTransfer.setData('isDirectory', isDir);
+    }
+
+    function handleRemoteDrop(event) {
+      event.preventDefault();
+      event.currentTarget.style.background = 'transparent';
+
+      const path = event.dataTransfer.getData('text/plain');
+      const isDir = event.dataTransfer.getData('isDirectory') === 'true';
+
+      if (path) {
+        selectedRemoteFile = { path, isDir, name: path.split('/').pop(), size: 0 };
+        showFilePreview(selectedRemoteFile, 'remote');
+      }
+    }
+
+    async function uploadSelected() {
+      if (!selectedLocalFile || selectedLocalFile.isDir) {
+        showToast('请选择一个文件上传', true);
+        return;
+      }
+
+      const server = servers.find(s => s.id === uploadTargetServerId);
+      if (!server) {
+        showToast('服务器不存在', true);
+        return;
+      }
+
+      const progressDiv = document.getElementById('transferProgress');
+      const progressBar = document.getElementById('transferProgressBar');
+      const statusDiv = document.getElementById('transferStatus');
+      const uploadBtn = document.getElementById('uploadBtn');
+
+      progressDiv.style.display = 'block';
+      uploadBtn.disabled = true;
+      progressBar.style.width = '10%';
+      statusDiv.textContent = '读取文件...';
+
+      try {
+        const fileResult = await window.api.readLocalFile({ filePath: selectedLocalFile.path });
+
+        if (!fileResult.success) {
+          showToast('读取文件失败: ' + fileResult.error, true);
+          uploadBtn.disabled = false;
+          progressDiv.style.display = 'none';
+          return;
+        }
+
+        progressBar.style.width = '30%';
+        statusDiv.textContent = '上传中...';
+
+        // 上传到远程目录 remotePath
+        const targetPath = remotePath.endsWith('/') ? remotePath : remotePath + '/';
+
+        const result = await window.api.uploadFile({
+          server,
+          fileData: fileResult.data,
+          fileName: selectedLocalFile.name,
+          remotePath: targetPath
+        });
+
+        progressBar.style.width = '100%';
+
+        if (result.success) {
+          statusDiv.textContent = '上传完成!';
+          showToast('文件上传成功');
+          loadRemoteFiles();
+        } else {
+          progressBar.style.width = '0%';
+          showToast('上传失败: ' + result.error, true);
+        }
+        uploadBtn.disabled = false;
+      } catch (err) {
+        showToast('上传失败: ' + err.message, true);
+        uploadBtn.disabled = false;
+        progressDiv.style.display = 'none';
+      }
+    }
+
+    async function downloadSelected() {
+      if (!selectedRemoteFile || selectedRemoteFile.isDir) {
+        showToast('请选择一个文件下载', true);
+        return;
+      }
+
+      const server = servers.find(s => s.id === uploadTargetServerId);
+      if (!server) {
+        showToast('服务器不存在', true);
+        return;
+      }
+
+      const progressDiv = document.getElementById('transferProgress');
+      const progressBar = document.getElementById('transferProgressBar');
+      const statusDiv = document.getElementById('transferStatus');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      progressDiv.style.display = 'block';
+      downloadBtn.disabled = true;
+      progressBar.style.width = '10%';
+      statusDiv.textContent = '准备下载...';
+
+      try {
+        // 下载到本地目录 localPath
+        const downloadPath = localPath + '\\' + selectedRemoteFile.name;
+
+        const result = await window.api.downloadFile({
+          server,
+          remotePath: selectedRemoteFile.path,
+          localPath: downloadPath
+        });
+
+        progressBar.style.width = '100%';
+
+        if (result.success) {
+          statusDiv.textContent = '下载完成!';
+          showToast('下载成功: ' + downloadPath);
+        } else {
+          progressBar.style.width = '0%';
+          showToast('下载失败: ' + result.error, true);
+        }
+        downloadBtn.disabled = false;
+      } catch (err) {
+        showToast('下载失败: ' + err.message, true);
+        downloadBtn.disabled = false;
+        progressDiv.style.display = 'none';
+      }
+    }
+
+    function transferFile() {
+      // Called from preview - delegates to upload or download
+      const previewBtn = document.getElementById('transferFileBtn');
+      if (previewBtn.textContent === '上传') {
+        uploadSelected();
+      } else {
+        downloadSelected();
+      }
+    }
+
+    function switchToTerminalView() {
+      document.getElementById('terminalContainer').style.display = 'flex';
+      document.getElementById('detailPanel').style.display = 'none';
+    }
+
+    function switchToListView() {
+      document.getElementById('terminalContainer').style.display = 'none';
+      document.getElementById('detailPanel').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>

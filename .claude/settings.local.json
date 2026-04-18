@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm start:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(where ssh:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(sftp \")",
+      "Bash(where scp:*)",
+      "Bash(where sshpass:*)",
+      "Bash(where expect:*)",
+      "Bash(where plink:*)",
+      "Read(//c/Program Files/Git/usr/bin/**)",
+      "Read(//c/msys64/usr/bin/**)",
+      "Bash(cd:*)"
+    ]
+  }
+}
